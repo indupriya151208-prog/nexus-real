@@ -1,6 +1,5 @@
 import streamlit as st
 import math
-import random
 
 # Set up clean web layout page configurations
 st.set_page_config(page_title="NEXUS Autonomous Simulation", layout="wide")
@@ -18,11 +17,11 @@ class NativeAutonomousAV:
         self.max_speed = 15.0
         self.cbf_gamma = cbf_gamma
 
-    def process_dynamic_risk_field(self, x, y, speed, heading, obstacle):
+    def process_dynamic_risk_field(self, car_x, car_y, speed, heading, obstacle):
         vx = speed * math.cos(heading)
         vy = speed * math.sin(heading)
-        dx = obstacle["x"] - x
-        dy = obstacle["y"] - y
+        dx = obstacle["x"] - car_x
+        dy = obstacle["y"] - car_y
         dvx = obstacle["vx"] - vx
         dvy = obstacle["vy"] - vy
         
@@ -40,8 +39,11 @@ class NativeAutonomousAV:
     def calculate_safety_actuation(self, vehicle_state, destination, obstacles):
         x, y, speed, heading = vehicle_state
         
-        # FIX: Access destination elements cleanly as array indexes [0] and [1]
-        target_angle = math.arctan2(destination[1] - y, destination[0] - x)
+        # Explicitly parse destination coordinates as single float points
+        dest_x = float(destination[0])
+        dest_y = float(destination[1])
+        
+        target_angle = math.atan2(dest_y - y, dest_x - x)
         nominal_steer = max(-self.max_steer, min(self.max_steer, target_angle - heading))
         
         best_speed, best_steer = self.max_speed, nominal_steer
@@ -92,7 +94,7 @@ obs2_vx = st.sidebar.slider("Scooter Oncoming Speed (m/s)", -10.0, 0.0, -4.5)
 # Initialize Simulation State Data
 av_engine = NativeAutonomousAV(cbf_gamma=gamma_slider)
 car_pose = [0.0, 0.0, 8.0, 0.0] 
-target_goal = [35.0, 0.0] # Keeping layout as coordinate pair lists
+target_goal = [35.0, 0.0]
 
 active_obstacles = [
     {"x": obs1_x, "y": obs1_y, "radius": 1.2, "vx": -0.5, "vy": 0.0},
@@ -113,13 +115,14 @@ col3.metric("Safety Core Status", system_status)
 
 st.subheader("🗺️ Live Virtual Drivable Corridor Vector Tracking Map")
 
-chart_data = []
-# Add vehicle position coordinates cleanly
-chart_data.append({"X": car_pose[0], "Y": car_pose[1], "Type": "Autonomous Vehicle"})
-# Add destination target goal coordinates cleanly
-chart_data.append({"X": target_goal[0], "Y": target_goal[1], "Type": "Target Destination"})
-# Add live obstacles positions
+# Hardened Explicit Dictionary Layout configuration mapping loops for scatter_chart
+chart_data = [
+    {"X": float(car_pose[0]), "Y": float(car_pose[1]), "Type": "Autonomous Vehicle"},
+    {"X": float(target_goal[0]), "Y": float(target_goal[1]), "Type": "Target Destination"}
+]
+
+# Append formatted coordinates layout strings
 for i, obs in enumerate(active_obstacles):
-    chart_data.append({"X": obs["x"], "Y": obs["y"], "Type": f"Obstacle {i+1}"})
+    chart_data.append({"X": float(obs["x"]), "Y": float(obs["y"]), "Type": f"Obstacle {i+1}"})
 
 st.scatter_chart(chart_data, x="X", y="Y", color="Type", use_container_width=True)
