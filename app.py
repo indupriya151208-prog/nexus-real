@@ -39,13 +39,14 @@ class NativeAutonomousAV:
 
     def calculate_safety_actuation(self, vehicle_state, destination, obstacles):
         x, y, speed, heading = vehicle_state
+        
+        # FIX: Access destination elements cleanly as array indexes [0] and [1]
         target_angle = math.arctan2(destination[1] - y, destination[0] - x)
         nominal_steer = max(-self.max_steer, min(self.max_steer, target_angle - heading))
         
         best_speed, best_steer = self.max_speed, nominal_steer
         max_cbf_margin = -float('inf')
         
-        # Grid sample search space for local predictive optimization mapping loops
         candidate_steers = [nominal_steer, nominal_steer - 0.2, nominal_steer + 0.2, 0.0, -0.4, 0.4]
         candidate_speeds = [self.max_speed, self.max_speed * 0.5, 0.0]
         
@@ -91,12 +92,12 @@ obs2_vx = st.sidebar.slider("Scooter Oncoming Speed (m/s)", -10.0, 0.0, -4.5)
 # Initialize Simulation State Data
 av_engine = NativeAutonomousAV(cbf_gamma=gamma_slider)
 car_pose = [0.0, 0.0, 8.0, 0.0] 
-target_goal = [35.0, 0.0]
+target_goal = [35.0, 0.0] # Keeping layout as coordinate pair lists
 
 active_obstacles = [
     {"x": obs1_x, "y": obs1_y, "radius": 1.2, "vx": -0.5, "vy": 0.0},
     {"x": obs2_x, "y": -1.0, "radius": 1.0, "vx": obs2_vx, "vy": 0.0},
-    {"x": 18.0, "y": -2.5, "radius": 1.4, "vx": 0.0, "vy": 0.0} # Fixed pothole defect
+    {"x": 18.0, "y": -2.5, "radius": 1.4, "vx": 0.0, "vy": 0.0} 
 ]
 
 # Run Single Execution Tracking Frame Loop
@@ -111,13 +112,11 @@ col2.metric("Steering Turn Angle", f"{final_steer:.3f} rad")
 col3.metric("Safety Core Status", system_status)
 
 st.subheader("🗺️ Live Virtual Drivable Corridor Vector Tracking Map")
-st.markdown("This generated schematic map visualizes the safe corridor calculation over dynamic threat zones.")
 
-# Render clean canvas drawings using built-in matrix charting utilities
 chart_data = []
-# Add vehicle position
+# Add vehicle position coordinates cleanly
 chart_data.append({"X": car_pose[0], "Y": car_pose[1], "Type": "Autonomous Vehicle"})
-# Add destination target goal
+# Add destination target goal coordinates cleanly
 chart_data.append({"X": target_goal[0], "Y": target_goal[1], "Type": "Target Destination"})
 # Add live obstacles positions
 for i, obs in enumerate(active_obstacles):
